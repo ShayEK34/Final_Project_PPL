@@ -30,6 +30,8 @@ import logging.config
 from selenium import webdriver as wd
 import selenium
 import numpy as np
+from selenium.webdriver.common.keys import Keys
+
 from schema import SCHEMA
 import json
 import urllib
@@ -37,8 +39,7 @@ import datetime as dt
 
 start = time.time()
 
-DEFAULT_URL = ('https://www.glassdoor.com/Overview/Working-at-'
-               'Premise-Data-Corporation-EI_IE952471.11,35.htm')
+DEFAULT_URL = ('https://www.glassdoor.com/Interview/index.htm')
 
 parser = ArgumentParser()
 parser.add_argument('-u', '--url',
@@ -396,24 +397,37 @@ def navigate_to_reviews():
     return True
 
 
-def navigate_to_Interviews():
+def navigate_to_interviews():
     logger.info('Navigating to company interviews')
 
     browser.get(args.url)
     time.sleep(1)
 
+    inputElement = browser.find_element_by_id("KeywordSearch")
+    inputElement.send_keys('nice')
+    inputElement.send_keys(Keys.ENTER)
+
+    print('here')
+
+    interviews_place = browser.find_elements_by_class_name("interviewEmployerList")[0]
+    interviews_place_path = interviews_place.find_element_by_tag_name('a').get_attribute('href')
+
+    browser.get(interviews_place_path)
+    time.sleep(1)
+    return True
+
+
     if no_interviews():
         logger.info('No interviews to scrape. Bailing!')
         return False
 
-    interviews_cell = browser.find_element_by_xpath(
-        '//a[@data-label="Inter­views"]')
-    interviews_path = interviews_cell.get_attribute('href')
-
-    # reviews_path = driver.current_url.replace('Overview','Reviews')
-    browser.get(interviews_path)
-    time.sleep(1)
-    return True
+    # interviews_cell = browser.find_element_by_xpath(
+    #     '//a[@data-label="Inter­views"]')
+    # interviews_path = interviews_cell.get_attribute('href')
+    #
+    # browser.get(interviews_path)
+    # time.sleep(1)
+    # return True
 
 
 def sign_in():
@@ -521,5 +535,87 @@ def main():
     logger.info(f'Finished in {end - start} seconds')
 
 
+def extract_interviews_from_page():
+
+    def is_featured(interview):
+        try:
+            interview.find_element_by_class_name('featuredFlag')
+            return True
+        except selenium.common.exceptions.NoSuchElementException:
+            return False
+
+    def extract_review(review):
+        author = review.find_element_by_class_name('authorInfo')
+        res = {}
+        # import pdb;pdb.set_trace()
+        for field in SCHEMA:
+            res[field] = scrape(field, review, author)
+
+        assert set(res.keys()) == set(SCHEMA)
+        return res
+
+    logger.info(f'Extracting reviews from page {page[0]}')
+
+    res = pd.DataFrame([], columns=SCHEMA)
+
+    reviews = browser.find_elements_by_class_name('empReview')
+    logger.info(f'Found {len(reviews)} reviews on page {page[0]}')
+
+    for review in reviews:
+        if not is_featured(review):
+            data = extract_review(review)
+            logger.info(f'Scraped data for "{data["review_title"]}"\({data["date"]})')
+            res.loc[idx[0]] = data
+        else:
+            logger.info('Discarding a featured review')
+        idx[0] = idx[0] + 1
+
+    if args.max_date and \
+        (pd.to_datetime(res['date']).max() > args.max_date) or \
+            args.min_date and \
+            (pd.to_datetime(res['date']).min() < args.min_date):
+        logger.info('Date limit reached, ending process')
+        date_limit_reached[0] = True
+
+    return res
+
+
+def interview_main():
+    logger.info(f'Scraping up to {args.limit} interviews.')
+
+    res = pd.DataFrame([], columns=SCHEMA)
+
+    sign_in()
+
+    if not args.start_from_url:
+        interviews_exist = navigate_to_interviews()
+        if not interviews_exist:
+            return
+    else:
+        browser.get(args.url)
+        page[0] = get_current_page()
+        logger.info(f'Starting from page {page[0]:,}.')
+        time.sleep(1)
+
+    interviews_df = extract_interviews_from_page()
+    res = res.append(interviews_df)
+
+    # import pdb;pdb.set_trace()
+
+    while more_pages() and \
+            len(res) < args.limit and \
+            not date_limit_reached[0]:
+        go_to_next_page()
+        reviews_df = extract_from_page()
+        res = res.append(reviews_df)
+
+    logger.info(f'Writing {len(res)} reviews to file {args.file}')
+    res.to_csv(args.file, index=False, encoding='utf-8')
+
+    end = time.time()
+    logger.info(f'Finished in {end - start} seconds')
+
+
 if __name__ == '__main__':
-    main()
+    interview_main()
+    # main()
