@@ -86,7 +86,7 @@ if args.credentials:
         args.password = d['password']
 else:
     try:
-        with open('secret.json') as f:
+        with open('backend/scrape_interviews/secret.json') as f:
             d = json.loads(f.read())
             args.username = d['username']
             args.password = d['password']
@@ -424,10 +424,9 @@ def interview_main(company,location,job_title):
             res=res.append(df_tmp, ignore_index=True)
             print(res)
 
-    path=company+'_'+job_title+'Jobs_interviews.csv'
+    path='backend/interview_outputs/'+company+'_'+job_title+'Jobs_interviews.csv'
     res.to_csv(str(path))
     print('interviews file updated')
-
 
 if __name__ == '__main__':
     company = input("Enter the company name: ")
