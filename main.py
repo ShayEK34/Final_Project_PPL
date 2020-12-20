@@ -38,7 +38,6 @@ import urllib
 import datetime as dt
 
 start = time.time()
-interview_jobs= ['Software']
 
 DEFAULT_URL = ('https://www.glassdoor.com/Interview/index.htm')
 
@@ -53,7 +52,7 @@ parser.add_argument('--headless', action='store_true',
 parser.add_argument('--username', help='Email address used to sign in to GD.')
 parser.add_argument('-p', '--password', help='Password to sign in to GD.')
 parser.add_argument('-c', '--credentials', help='Credentials file')
-parser.add_argument('-l', '--limit', default=25,
+parser.add_argument('-l', '--limit', default=100,
                     action='store', type=int, help='Max reviews to scrape')
 parser.add_argument('--start_from_url', action='store_true',
                     help='Start scraping from the passed URL.')
@@ -116,19 +115,10 @@ logging.getLogger('selenium').setLevel(logging.CRITICAL)
 def scrape(field, interview):
 
     def scrape_emp_title(interview):
-        return interview[1]
+        for sentence in interview:
+            if 'Interview' in sentence:
+                return sentence
 
-    def scrape_application(interview):
-        flag= False
-        app=""
-        for line in interview:
-            if line=='Application':
-                flag= True
-            elif line!='Application' and not flag:
-                continue
-            elif line!='Application' and flag:
-                app=app+ line+ " "
-        return app
 
     def scrape_interview(interview):
         flag = False
@@ -138,33 +128,35 @@ def scrape(field, interview):
                 flag = True
             elif line != 'Interview' and not flag:
                 continue
-            elif line != 'Interview' and flag:
-                app = app + line + " "
-        return app
+            elif line != 'Interview' and line != 'Interview Questions' and flag:
+                Interview = Interview + line + " "
+            elif line == 'Interview Questions' and flag:
+                return Interview
+        return Interview
 
     def scrape_interview_questions(interview):
         flag = False
         answer_questions = ""
         for line in interview:
-            if line == 'Answer Questions':
+            if line == 'Interview Questions':
                 flag = True
-            elif line != 'Answer Questions' and not flag:
+            elif line != 'Interview Questions' and not flag:
                 continue
-            elif line != 'Answer Questions' and flag:
-                app = app + line + " "
-        return app
+            elif line == '1 Answer' or line == 'Answer Question' or 'Helpful' in line:
+                continue
+            elif line != 'Interview Questions' and flag:
+                answer_questions = answer_questions + line + " "
+
+        return answer_questions
 
 
     funcs = [
         scrape_emp_title,
-        scrape_application,
         scrape_interview,
         scrape_interview_questions
     ]
 
     fdict = dict((s, f) for (s, f) in zip(SCHEMA, funcs))
-    fdict['Job title'](interview)
-    fdict['Application'](interview)
 
     return fdict[field](interview)
 
@@ -172,7 +164,7 @@ def scrape(field, interview):
 def more_pages():
     try:
         # paging_control = browser.find_element_by_class_name('pagingControls')
-        next_ = browser.find_element_by_class_name('pagination__PaginationStyle__next')
+        next_ = browser.find_element_by_class_name('next')
         next_.find_element_by_tag_name('a')
         return True
     except selenium.common.exceptions.NoSuchElementException:
@@ -183,7 +175,7 @@ def go_to_next_page():
     logger.info(f'Going to page {page[0] + 1}')
     # paging_control = browser.find_element_by_class_name('pagingControls')
     next_ = browser.find_element_by_class_name(
-        'pagination__PaginationStyle__next').find_element_by_tag_name('a')
+        'next').find_element_by_tag_name('a')
     browser.get(next_.get_attribute('href'))
     time.sleep(1)
     page[0] = page[0] + 1
@@ -198,28 +190,52 @@ def no_interviews():
     return False
     # TODO: Find a company with no interviews to test on
 
-def navigate_to_interviews():
+def navigate_to_interviews(company, location):
     logger.info('Navigating to company interviews')
 
     browser.get(args.url)
     time.sleep(1)
 
-    inputElement = browser.find_element_by_id("KeywordSearch")
-    inputElement.send_keys('nice')
-    inputElement.send_keys(Keys.ENTER)
+    inputElement_place = browser.find_element_by_id("KeywordSearch")
+    # company= 'nice'
+    inputElement_place.send_keys(company)
 
+    inputElement_location = browser.find_element_by_id("LocationSearch").clear()
+    # location= 'Tel Aviv (Israel)'
+    browser.find_element_by_id("LocationSearch").send_keys(location)
 
-    try:
-        interviews_place = browser.find_elements_by_class_name("interviewEmployerList")[0]
-        time.sleep(1)
-        time.sleep(1)
-    except:
-        pass
+    inputElement_place.send_keys(Keys.ENTER)
+def get_interviews_from_page():
 
-    time.sleep(1)
-    interviews_place_path = interviews_place.find_element_by_tag_name('a').get_attribute('href')
-    browser.get(interviews_place_path)
-    interviews_details = browser.find_element_by_tag_name('ol').text.split('Helpful')
+    interviews_details = None
+    while interviews_details == None:
+        try:
+            try:
+                interviews_place = browser.find_elements_by_class_name("interviewEmployerList")[0]
+                time.sleep(8)
+                print('go into interview page...')
+                interviews_place_path = interviews_place.find_element_by_tag_name('a').get_attribute('href')
+                time.sleep(6)
+                browser.get(interviews_place_path)
+                print('create the data...')
+                time.sleep(10)
+                interviews_details = browser.find_element_by_tag_name('ol').text.split('Helpful')
+                time.sleep(8)
+            except:
+                interviews_place=browser.find_elements_by_id("EmployerInterviews")[0]
+                if(interviews_place.text!= ''):
+                    interviews_details= interviews_place.text
+                    # print(interviews_details, 'interviews_details4')
+                    return interviews_details
+
+                time.sleep(5)
+                interviews_details= interviews_place.find_elements_by_tag_name('li')
+                time.sleep(5)
+                print(interviews_details, 'interviews_details4')
+
+        except:
+            pass
+            break
 
     time.sleep(1)
     return interviews_details
@@ -288,18 +304,40 @@ browser = get_browser()
 page = [1]
 idx = [0]
 date_limit_reached = [False]
+limit_pages=110
 
-def extract_interviews_from_page(interviews):
+
+def hasNumbers(param):
+    return any(char.isdigit() for char in param)
+
+
+def extract_interviews_from_page(interviews, interview_jobs):
+
+    interviews_current_page= {}
 
     def is_relevant_interview(interview, interview_jobs):
+        flag= False
+        interview_details=""
         try:
-            interview_details= interview.split('\n')
+            if isinstance(interview, str):
+                interview_details = interview.split('\n')
+            else:
+                interview_details= interview.text.split('\n')
+            while len(interview_details)!=0 and (interview_details[0]==''\
+                    or hasNumbers(interview_details[0])):
+                interview_details.remove(interview_details[0])
+                flag=True
+
+
             if len(interview_details)>1:
-                interview_job= interview_details[1]
+                if flag:
+                    interview_job= interview_details[0]
+                else:
+                    interview_job= interview_details[1]
 
                 interview_job_words= interview_job.split(' ')
                 for word in interview_job_words:
-                    if(word in interview_jobs):
+                    if(word.lower() in interview_jobs):
                         return True
                 else:
                     return False
@@ -307,43 +345,46 @@ def extract_interviews_from_page(interviews):
             return False
 
     def extract_interview(interview):
-        interview= interview.split('\n')
+        res = {}
+        if(isinstance(interview, str)):
+            interview= interview.split('\n')
+        else:
+            interview= interview.text.split('\n')
         for field in SCHEMA:
             res[field] = scrape(field, interview)
 
         assert set(res.keys()) == set(SCHEMA)
         return res
 
-    res = {}
+
+    if not isinstance(interviews, list):
+        interviews= interviews.split('Helpful')
 
     for interview in interviews:
         if is_relevant_interview(interview, interview_jobs):
             data = extract_interview(interview)
-            logger.info(f'Scraped data for "{data["review_title"]}"\({data["date"]})')
-            res.loc[idx[0]] = data
-        else:
-            logger.info('Discarding a featured review')
-        idx[0] = idx[0] + 1
-
-    if args.max_date and \
-        (pd.to_datetime(res['date']).max() > args.max_date) or \
-            args.min_date and \
-            (pd.to_datetime(res['date']).min() < args.min_date):
-        logger.info('Date limit reached, ending process')
-        date_limit_reached[0] = True
-
-    return res
+            interviews_current_page[data['Job title']]= data
+    return interviews_current_page
 
 
-def interview_main():
+def interview_main(company,location,job_title):
+    def synony_jobs(job_title):
+        # return ['Software']
+        return [job_title.lower()]
+
+    pages=0
     logger.info(f'Scraping up to {args.limit} interviews.')
 
     res = pd.DataFrame([], columns=SCHEMA)
 
+    interview_jobs= synony_jobs(job_title)
+
     sign_in()
     interviews_exist=[]
     if not args.start_from_url:
-        interviews_exist = navigate_to_interviews()
+        navigate_to_interviews(company, location)
+        time.sleep(5)
+        interviews_exist = get_interviews_from_page()
         if not interviews_exist:
             return
     else:
@@ -352,24 +393,47 @@ def interview_main():
         logger.info(f'Starting from page {page[0]:,}.')
         time.sleep(1)
 
-    interviews_df = extract_interviews_from_page(interviews_exist)
-    res = res.append(interviews_df)
-
+    interviews_df = extract_interviews_from_page(interviews_exist, interview_jobs)
+    for found in list(interviews_df.values()):
+        df_tmp= {'Job title':found['Job title'],
+                    'Interview':found['Interview'] ,'Interview Questions' : found['Interview Questions']}
+        res=res.append(df_tmp, ignore_index=True)
+        print(res)
 
     while more_pages() and \
             len(res) < args.limit and \
-            not date_limit_reached[0]:
+            pages< limit_pages:
         go_to_next_page()
-        interviews_exist = navigate_to_interviews()
-        res = res.append(interviews_exist)
+        pages= pages+1
+        interviews_exist_urls = get_interviews_from_page()
+        interviews_exist=[]
 
-    logger.info(f'Writing {len(res)} reviews to file {args.file}')
-    res.to_csv(args.file, index=False, encoding='utf-8')
+        if(isinstance(interviews_exist_urls[0],str)):
+            interviews_exist = interviews_exist_urls
 
-    end = time.time()
-    logger.info(f'Finished in {end - start} seconds')
+        else:        
+            for inter in interviews_exist_urls:
+                if inter.text!='' and hasNumbers(inter.text.split('\n')[0][0:20]):
+                    interviews_exist.append(inter.text)
+
+
+        interviews_df = extract_interviews_from_page(interviews_exist, interview_jobs)
+        for found in list(interviews_df.values()):
+            df_tmp = {'Job title': found['Job title'],
+                    'Interview': found['Interview'], 'Interview Questions': found['Interview Questions']}
+            res=res.append(df_tmp, ignore_index=True)
+            print(res)
+
+    path=company+'_'+job_title+'Jobs_interviews.csv'
+    res.to_csv(str(path))
+    print('interviews file updated')
 
 
 if __name__ == '__main__':
-    interview_main()
-    # main()
+    company = input("Enter the company name: ")
+    location = input("Enter the job location : ")
+    job_title = input("Enter the job title : ")
+    interview_main(company,location,job_title )
+    browser.close()
+
+
