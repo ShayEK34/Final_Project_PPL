@@ -424,7 +424,7 @@ def interview_main(company,location,job_title):
             res=res.append(df_tmp, ignore_index=True)
             print(res)
 
-    path='backend/interview_outputs/'+company+'_'+job_title+'Jobs_interviews.csv'
+    path='backend/interview_scraper/'+company+'_'+job_title+'Jobs_interviews.csv'
     res.to_csv(str(path))
     print('interviews file updated')
 
