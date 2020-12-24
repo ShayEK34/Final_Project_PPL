@@ -1,108 +1,134 @@
-from tkinter import *
+
 import tkinter as tk
+import tkinter.messagebox
+from PIL import ImageTk, Image
 from backend.interview_semantic import positive_negative
 from backend.interview_topic_modeling import LDA
-from functools import partial
-from PIL import ImageTk, Image
-import os
 
-def raise_frame(frame):
-    if (company_name.get() == "google"):
-        print("hi")
-    frame.tkraise()
+BACKGROUND_COLOR= "#92a8d1"
 
-WIDTH=750
-HEIGTH=540
+class SampleApp(tk.Tk):
+    def __init__(self):
+        tk.Tk.__init__(self)
+        self._frame = None
+        self.details=[]
+        self.screen_id= "StartPage"
+        self.switch_frame(StartPage, self.screen_id ,self.details)
 
-root = Tk()
-root.title("Find your next challenge") # title of the GUI window
-root.geometry("750x540") #Width x Height
-root.config(bg="#92a8d1") # specify background color
+    def switch_frame(self, frame_class, screen_id, details):
+        if screen_id=="StartPage":
+            new_frame = frame_class(self)
+            if self._frame is not None:
+                self._frame.destroy()
+            self._frame = new_frame
+            self._frame.pack()
 
-f1 = Frame(root)
-f1.name= "search"
-f2 = Frame(root)
-f2.name= "results"
+        elif screen_id=="PageOne":
+            if( details['company_name'].get()=="choose ..." or  details['job_title'].get()=="choose ..." or details['location'].get()=="choose ..."):
+                tk.messagebox.showinfo("warning", "you must fill all entries fields")
+                self.switch_frame(StartPage, "StartPage" ,"")
+            else:
+                new_frame = frame_class(self , details)
+                if self._frame is not None:
+                    self._frame.destroy()
+                self._frame = new_frame
+                self._frame.pack()
 
-company_name = tk.StringVar(root)
-location= tk.StringVar(root)
-job_title= tk.StringVar(root)
+class StartPage(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        master.title("Find your next challenge")  # title of the GUI window
+        master.geometry("750x340")  # Width x Height
+        master.configure(bg="#92a8d1")  # specify background color
+        tk.Label(master, text="Find your next challenge")
 
-for frame in (f1, f2):
-    frame.grid(row=0, column=0, padx=17, pady=15, sticky='news' )
+        self.inner_frame = tk.Frame(self)
+        self.inner_frame.configure(bg=BACKGROUND_COLOR)
+        # self.id_var = tk.StringVar(self)
+        self.details={}
 
-    image = Image.open("office.jpg")
-    image=image.resize((750, 540), Image.ANTIALIAS)
-    photo = ImageTk.PhotoImage(image)
-    back_ground = Label(frame, image=photo)
-    back_ground.image = photo
-    back_ground.place(x=0, y=0)
+        self.details['company_name'] = tk.StringVar(self)
+        self.details['company_name'] .set("choose ...")
 
-    if(frame.name== "search"):
-        for i in range(5):
-            Label(back_ground).grid()
+        self.details['location'] = tk.StringVar(self)
+        self.details['location'].set("choose ...")
 
-        l= Label(back_ground, text="ready for your new challenge?", bg='#99CCCC')
-        l.config(font=("Courier", 12))
-        l.grid(row=3, column=1)
+        self.details['job_title'] = tk.StringVar(self)
+        self.details['job_title'].set("choose ...")
 
-        for i in range(7):
-            Label(back_ground).grid()
+        tk.Label(self.inner_frame,bg="#92a8d1", font=('Helvetica', 20, "bold")).grid(row=1, column=1)
+        tk.Label(self.inner_frame, text="JobMe",bg="#92a8d1", font=('Helvetica', 20, "bold")).grid(row=2, column=0)
+        tk.Label(self.inner_frame,bg="#92a8d1", font=('Helvetica', 20, "bold")).grid(row=3, column=1)
 
-        Label(back_ground, text="company name", bg="#92a8d1").grid(row=15, column=0)
-        Label(back_ground, text="location", bg="#92a8d1").grid(row=16,column=0)
-        Label(back_ground, text="job title", bg="#92a8d1").grid(row=17,column=0)
+        tk.Label(self.inner_frame, text="company name", font=("Helvetica", 16), bg=BACKGROUND_COLOR).grid(row=4, column=0)
+        tk.OptionMenu(self.inner_frame, self.details['company_name'], "google", "apple", "microsoft").grid(row=4, column=1, padx=5,
+                                                                                          pady=5)
 
-        e1 = Entry(back_ground,  textvariable = company_name ,width="101").grid(row=15, column=1)
-        location = Entry(back_ground,width="101").grid(row=16, column=1)
-        job_title = Entry(back_ground,width="101").grid(row=17, column=1)
+        tk.Label(self.inner_frame, text="location", font=("Helvetica", 16), bg=BACKGROUND_COLOR).grid(row=5, column=0)
+        tk.OptionMenu(self.inner_frame, self.details['location'], "tel aviv").grid(row=5, column=1, padx=5,
+                                                                                          pady=5)
 
-        for i in range(4):
-            Label(back_ground).grid()
+        tk.Label(self.inner_frame, text="job title", font=("Helvetica", 16), bg=BACKGROUND_COLOR).grid(row=6, column=0)
+        tk.OptionMenu(self.inner_frame, self.details['job_title'], "software").grid(row=6, column=1, padx=5,
+                                                                                          pady=5)
 
-        b= Button(back_ground, text='Help me get ready...', command=lambda: raise_frame(f2))
-        b.config(font=("Courier", 12))
-        b.grid(column=1)
-        Label(back_ground).grid()
-        Label(back_ground).grid()
+        tk.Button(self.inner_frame, text="help me to find my new challenge !" , font=("Helvetica", 10),
+                  command=lambda: master.switch_frame(PageOne, "PageOne", self.details)).grid(row=8, column=1,
+                                                                                                         padx=10, pady=10)
 
-    # f2
-    else:
-        left_frame = Frame(f2, width=1900, height=600, bg='#99CCCC')
-        left_frame.grid(row=0, column=0, padx=17, pady=5)
-        middle_frame = Frame(f2, width=200, height=200, bg='grey')
-        middle_frame.grid(row=0, column=1, padx=10, pady=5)
-        right_frame = Frame(f2, width=1000, height=1000, bg='grey')
-        right_frame.grid(row=0, column=2, padx=10, pady=5)
-        image_path= positive_negative.get_output()
+        self.inner_frame.pack(anchor="s", side="top")
 
-        Label(right_frame, textvariable=company_name).grid(row=1, column=1, padx=5, pady=5)
-        but= Button(f2, text='Back', command=lambda:raise_frame(f1))
-        but.grid(row=1, column=2, padx=5, pady=3, ipadx=10)
 
-        # Create frames and labels in left_frame
-        Label(left_frame, textvariable=company_name , bg="#99CCCC").grid(row=0, column=0, padx=5, pady=5)
+class PageOne(tk.Frame):
+    def __init__(self, master, details):
+        tk.Frame.__init__(self, master)
+        self.config(bg=BACKGROUND_COLOR)
+        tk.Button(self, text="Go back to start page",
+                  command=lambda: master.switch_frame(StartPage,"StartPage", "")).pack(side="top", fill="both" )
 
-        # load image to be "edited"
-        image=Image.open(image_path)
-        image = image.resize((200, 200), Image.ANTIALIAS)
-        img = ImageTk.PhotoImage(image)
-        Label(left_frame,image=img).grid(row=1, column=0, padx=5, pady=5)
+        self.left_inner_frame = tk.Frame(self)
+        self.left_inner_frame.configure(bg=BACKGROUND_COLOR)
+        self.id_var = tk.StringVar(self)
+        tk.Label(self.left_inner_frame, bg=BACKGROUND_COLOR, text=details['company_name'].get(), font=('Helvetica', 40, "bold")).pack()
 
-        # Display image in right_frame
-        Label(right_frame, image=img).grid(row=0,column=1, padx=5, pady=5)
+        self.image_company_path= "../frontend/resurces/" + str(details['company_name'].get()).lower() + ".jpg"
+        self.image=Image.open(self.image_company_path)
+        self.image = self.image.resize((200, 200 ), Image.ANTIALIAS)
+        self.img = ImageTk.PhotoImage(self.image)
+        tk.Label(self.left_inner_frame, image=self.img).pack()
+
+        self.left_inner_frame.pack(side="left")
+        self.middle_inner_frame = tk.Frame(self)
+        self.middle_inner_frame.configure(bg=BACKGROUND_COLOR)
 
         # Create tool bar frame
-        tool_bar = Frame(left_frame, width=180, height=185)
-        tool_bar.grid(row=2, column=0, padx=5, pady=5)
+        self.tool_bar = tk.Frame(self.middle_inner_frame, bg=BACKGROUND_COLOR, width=300, height=185)
+        self.tool_bar.pack()
 
         # Example labels that serve as placeholders for other widgets
-        Label(tool_bar, text="most relevant Topics").grid(row=0, column=0, padx=5, pady=3, ipadx=10) # ipadx is padding inside the Label widget
+        tk.Label(self.tool_bar, text="most relevant Topics:", font=('Helvetica', 15, "bold"), bg=BACKGROUND_COLOR).pack(pady=30)
 
         # Example labels that could be displayed under the "Tool" menu
-        relevants_topics= LDA.get_words();
+        relevants_topics= LDA.get_words(str(details['company_name'].get()).lower());
         for idx, val in enumerate(relevants_topics):
-            Label(tool_bar, text=val).grid(row=idx+1, column=0, padx=5, pady=5)
+            tk.Label(self.tool_bar,bg=BACKGROUND_COLOR, text=val).pack()
 
-raise_frame(f1)
-root.mainloop()
+        self.right_inner_frame = tk.Frame(self)
+        self.right_inner_frame.configure(bg=BACKGROUND_COLOR)
+
+        self.image_pos_neg_path= positive_negative.get_output(details['company_name'].get())
+        self.image_pos_neg = Image.open(self.image_pos_neg_path)
+        self.image_pos_neg = self.image_pos_neg.resize((260, 260), Image.ANTIALIAS)
+        self.img_pos_neg = ImageTk.PhotoImage(self.image_pos_neg)
+        tk.Label(self.right_inner_frame, bg=BACKGROUND_COLOR, text="General feeling from the interviews:", font=('Helvetica', 10,"bold")).pack(side="top")
+        tk.Label(self.right_inner_frame, image=self.img_pos_neg).pack(side="top")
+
+
+        self.right_inner_frame.pack(side="right", fill="both")
+        self.middle_inner_frame.pack(side="right", fill="both")
+
+
+
+if __name__ == "__main__":
+    app = SampleApp()
+    app.mainloop()
