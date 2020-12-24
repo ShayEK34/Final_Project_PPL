@@ -109,7 +109,7 @@ class PageOne(tk.Frame):
         tk.Label(self.tool_bar, text="most relevant Topics:", font=('Helvetica', 15, "bold"), bg=BACKGROUND_COLOR).pack(pady=30)
 
         # Example labels that could be displayed under the "Tool" menu
-        relevants_topics= LDA.get_words();
+        relevants_topics= LDA.get_words(str(details['company_name'].get()).lower());
         for idx, val in enumerate(relevants_topics):
             tk.Label(self.tool_bar,bg=BACKGROUND_COLOR, text=val).pack()
 
