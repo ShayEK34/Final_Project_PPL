@@ -2,8 +2,8 @@
 import tkinter as tk
 import tkinter.messagebox
 from PIL import ImageTk, Image
-from backend.interview_semantic import positive_negative
-from backend.interview_topic_modeling import LDA
+from backend.interview_sentiment import positive_negative
+from backend.interview_topic_modeling import LDA as model_LDA
 
 BACKGROUND_COLOR= "#92a8d1"
 
@@ -109,7 +109,8 @@ class PageOne(tk.Frame):
         tk.Label(self.tool_bar, text="most relevant Topics:", font=('Helvetica', 15, "bold"), bg=BACKGROUND_COLOR).pack(pady=30)
 
         # Example labels that could be displayed under the "Tool" menu
-        relevants_topics= LDA.get_words(str(details['company_name'].get()).lower());
+        lda= model_LDA.LDA()
+        relevants_topics= lda.get_words(str(details['company_name'].get()).lower())
         for idx, val in enumerate(relevants_topics):
             tk.Label(self.tool_bar,bg=BACKGROUND_COLOR, text=val).pack()
 
