@@ -62,7 +62,9 @@ class LDA():
 
         stop = (stopwords.words('english'))
         stop.extend(
-            ['it.', 'answers','q','s', 'given', 'questions', 'answer', 'question', 'it', 'asked', 'user.', 'question.', 'problem', 'time', 'would'])
+            ['it.', 'answers', 'questions', 'answer', 'question', 'it', 'asked', 'user.', 'question.', 'problem',
+             'time', 'would', 'q', '\'s', 'find',
+             'given', 'team', 'standard', 'one'])
         stop = set(stop)
         exclude = set(string.punctuation)
         lemma = WordNetLemmatizer()

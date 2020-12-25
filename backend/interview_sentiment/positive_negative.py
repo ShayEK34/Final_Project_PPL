@@ -132,7 +132,7 @@ class Sentiment():
         self.plot_pie_chart(positive, negative)
 
 if __name__ == '__main__':
-    path=r'../scrape_interviews/scraper_output/Google_softwareJobs_interviews.csv'
+    path=r'../scrape_interviews/scraper_output/apple_softwareJobs_interviews.csv'
 
     interview_questions = pd.read_csv(path)
     reviews = interview_questions[['Interview']]
