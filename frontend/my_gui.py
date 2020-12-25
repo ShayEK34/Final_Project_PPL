@@ -72,14 +72,14 @@ class StartPage(tk.Frame):
         tk.OptionMenu(self.inner_frame, self.details['job_title'], "software").grid(row=6, column=1, padx=5,
                                                                                           pady=5)
 
-        tk.Button(self.inner_frame, text="help me to find my new challenge !" , font=("Helvetica", 10),
-                  command=lambda: master.switch_frame(PageOne, "PageOne", self.details)).grid(row=8, column=1,
-                                                                                                         padx=10, pady=10)
+        tk.Button(self.inner_frame, text="help me to find my new challenge !", font=("Helvetica", 10),
+                  command=lambda: master.switch_frame(detailsPage, "PageOne", self.details)).grid(row=8, column=1,
+                                                                                                  padx=10, pady=10)
 
         self.inner_frame.pack(anchor="s", side="top")
 
 
-class PageOne(tk.Frame):
+class detailsPage(tk.Frame):
     def __init__(self, master, details):
         tk.Frame.__init__(self, master)
         self.config(bg=BACKGROUND_COLOR)
@@ -109,15 +109,24 @@ class PageOne(tk.Frame):
         tk.Label(self.tool_bar, text="most relevant Topics:", font=('Helvetica', 15, "bold"), bg=BACKGROUND_COLOR).pack(pady=30)
 
         # Example labels that could be displayed under the "Tool" menu
-        lda= model_LDA.LDA()
-        relevants_topics= lda.get_words(str(details['company_name'].get()).lower())
+        self.lda= model_LDA.LDA()
+        path=''
+        if(str(details['company_name'].get()).lower()=='google'):
+            path= r'../backend/scrape_interviews/scraper_output/Google_softwareJobs_interviews.csv'
+        elif (str(details['company_name'].get()).lower()=='apple'):
+            path = r'../backend/scrape_interviews/scraper_output/apple_softwareJobs_interviews.csv'
+        else:
+            path = r'../backend/scrape_interviews/scraper_output/Microsoft_softwareJobs_interviews.csv'
+
+        relevants_topics= self.lda.get_words(path)
         for idx, val in enumerate(relevants_topics):
             tk.Label(self.tool_bar,bg=BACKGROUND_COLOR, text=val).pack()
 
         self.right_inner_frame = tk.Frame(self)
         self.right_inner_frame.configure(bg=BACKGROUND_COLOR)
 
-        self.image_pos_neg_path= positive_negative.get_output(details['company_name'].get())
+        sentiment= positive_negative.Sentiment()
+        self.image_pos_neg_path= sentiment.get_output(details['company_name'].get())
         self.image_pos_neg = Image.open(self.image_pos_neg_path)
         self.image_pos_neg = self.image_pos_neg.resize((260, 260), Image.ANTIALIAS)
         self.img_pos_neg = ImageTk.PhotoImage(self.image_pos_neg)

@@ -1,5 +1,17 @@
 
+import pandas as pd
+import nltk
+
+from nltk.corpus import stopwords
+from nltk.stem.wordnet import WordNetLemmatizer
+from nltk.tokenize import TweetTokenizer
+import string
+import gensim
+from gensim import corpora
+
+
 class LDA():
+
     def clean(self, doc, stop, lemma, exclude):
         stop_free = " ".join([i for i in doc.lower().split() if i not in stop])
         punc_free = ''.join(ch for ch in stop_free if ch not in exclude)
@@ -50,7 +62,7 @@ class LDA():
 
         stop = (stopwords.words('english'))
         stop.extend(
-            ['it.', 'answers', 'questions', 'answer', 'question', 'it', 'asked', 'user.', 'question.', 'problem', 'time', 'would'])
+            ['it.', 'answers','q','s', 'given', 'questions', 'answer', 'question', 'it', 'asked', 'user.', 'question.', 'problem', 'time', 'would'])
         stop = set(stop)
         exclude = set(string.punctuation)
         lemma = WordNetLemmatizer()
@@ -75,33 +87,16 @@ class LDA():
 
 
 
-    def get_words(self, comapny):
-        if comapny=="google":
-            return ['array','list','projects','sum','threads']
-        elif comapny=="microsoft":
-            return ['list','array','threads','sum','projects']
-        else:
-            return ['threads','list','projects','sum','java']
 
-
-
+    def get_words(self, path):
+        interview_questions = pd.read_csv(path)
+        dict_topic_words = self.get_topics_words(1, 5, interview_questions)
+        return dict_topic_words[0]
 
 
 if __name__ == '__main__':
-    import numpy as np
-    import pandas as pd
-    import nltk
-    from nltk.corpus import stopwords
-    from nltk.stem.wordnet import WordNetLemmatizer
-    from nltk.tokenize import TweetTokenizer
-    import string
-    import gensim
-    from gensim import corpora
-
-    # nltk.download()
     lda= LDA()
-    path= r'backend/scrape_interviews/scraper_output/Google_softwareJobs_interviews.csv'
-    interview_questions = pd.read_csv(path)
-    dict_topic_words = lda.get_topics_words(1, 10, interview_questions)
-    print(dict_topic_words)
+    path= r'../scrape_interviews/scraper_output/Google_softwareJobs_interviews.csv'
+    ans= lda.get_words(path)
+    print(ans)
 
