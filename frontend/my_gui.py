@@ -37,14 +37,23 @@ class SampleApp(tk.Tk):
 class StartPage(tk.Frame):
     def __init__(self, master):
         tk.Frame.__init__(self, master)
-        master.title("Find your next challenge")  # title of the GUI window
-        master.geometry("750x340")  # Width x Height
         master.configure(bg="#92a8d1")  # specify background color
-        tk.Label(master, text="Find your next challenge")
 
-        self.inner_frame = tk.Frame(self)
-        self.inner_frame.configure(bg=BACKGROUND_COLOR)
-        # self.id_var = tk.StringVar(self)
+        fname = "office.jpg"
+        self.image = Image.open(fname)
+        self.image = self.image.resize((750, 340), Image.ANTIALIAS)
+        self.bg_image = ImageTk.PhotoImage(self.image)
+        self.w = self.bg_image.width()
+        self.h = self.bg_image.height()
+        master.geometry('750x340')
+
+        self.cv = tk.Canvas(self, width=self.w, height=self.h)
+        self.cv.pack(side='top', fill='both', expand='yes')
+
+        self.cv.create_image(0, 0, image=self.bg_image, anchor='nw')
+        tk.Label(self.cv, text="JobMe", bg="#92a8d1", font=('Helvetica', 20, "bold")).pack(pady=(50,0))
+
+
         self.details={}
 
         self.details['company_name'] = tk.StringVar(self)
@@ -56,27 +65,30 @@ class StartPage(tk.Frame):
         self.details['job_title'] = tk.StringVar(self)
         self.details['job_title'].set("choose ...")
 
-        tk.Label(self.inner_frame,bg="#92a8d1", font=('Helvetica', 20, "bold")).grid(row=1, column=1)
-        tk.Label(self.inner_frame, text="JobMe",bg="#92a8d1", font=('Helvetica', 20, "bold")).grid(row=2, column=0)
-        tk.Label(self.inner_frame,bg="#92a8d1", font=('Helvetica', 20, "bold")).grid(row=3, column=1)
+        up_frame = tk.Frame(self.cv)
+        up_frame.pack(side="top", pady=(75, 0))
+        tk.Label(up_frame, text="Company name", font=("Helvetica", 14), bg=BACKGROUND_COLOR).pack(side="left")
+        tk.OptionMenu(up_frame, self.details['company_name'], "google", "apple", "microsoft").pack(side="left")
 
-        tk.Label(self.inner_frame, text="company name", font=("Helvetica", 16), bg=BACKGROUND_COLOR).grid(row=4, column=0)
-        tk.OptionMenu(self.inner_frame, self.details['company_name'], "google", "apple", "microsoft").grid(row=4, column=1, padx=5,
-                                                                                          pady=5)
+        first_middle_frame = tk.Frame(self.cv)
+        first_middle_frame.pack(side="top", pady=(10, 0))
+        tk.Label(first_middle_frame, text="Location", font=("Helvetica", 14), bg=BACKGROUND_COLOR).pack(side="left")
+        tk.OptionMenu(first_middle_frame, self.details['location'], "Tel aviv").pack(side="left")
 
-        tk.Label(self.inner_frame, text="location", font=("Helvetica", 16), bg=BACKGROUND_COLOR).grid(row=5, column=0)
-        tk.OptionMenu(self.inner_frame, self.details['location'], "tel aviv").grid(row=5, column=1, padx=5,
-                                                                                          pady=5)
+        second_middle_frame = tk.Frame(self.cv)
+        second_middle_frame.pack(side="top", pady=(10, 0))
+        tk.Label(second_middle_frame, text="Job title", font=("Helvetica", 14), bg=BACKGROUND_COLOR).pack(side="left")
+        tk.OptionMenu(second_middle_frame, self.details['job_title'], "software engineer").pack(side="left")
 
-        tk.Label(self.inner_frame, text="job title", font=("Helvetica", 16), bg=BACKGROUND_COLOR).grid(row=6, column=0)
-        tk.OptionMenu(self.inner_frame, self.details['job_title'], "software").grid(row=6, column=1, padx=5,
-                                                                                          pady=5)
+        down_frame = tk.Frame(self.cv)
+        down_frame.pack(side="top", pady=(26, 0))
+        tk.Button(down_frame, text="help me to find my new challenge !", font=("Helvetica", 10),
+                  command=lambda: master.switch_frame(detailsPage, "PageOne", self.details)).pack()
 
-        tk.Button(self.inner_frame, text="help me to find my new challenge !", font=("Helvetica", 10),
-                  command=lambda: master.switch_frame(detailsPage, "PageOne", self.details)).grid(row=8, column=1,
-                                                                                                  padx=10, pady=10)
+        most_down = tk.Frame(self.cv)
+        most_down.pack(side="top", padx=(380, 380))
+        tk.Label(most_down, text="good lack", font=("Helvetica", 14), bg=BACKGROUND_COLOR).pack(side="left")
 
-        self.inner_frame.pack(anchor="s", side="top")
 
 
 class detailsPage(tk.Frame):
@@ -89,13 +101,13 @@ class detailsPage(tk.Frame):
         self.left_inner_frame = tk.Frame(self)
         self.left_inner_frame.configure(bg=BACKGROUND_COLOR)
         self.id_var = tk.StringVar(self)
-        tk.Label(self.left_inner_frame, bg=BACKGROUND_COLOR, text=details['company_name'].get(), font=('Helvetica', 40, "bold")).pack()
+        tk.Label(self.left_inner_frame, bg=BACKGROUND_COLOR, text=details['company_name'].get(), font=('Helvetica', 30, "bold")).pack(pady=15)
 
         self.image_company_path= "../frontend/resurces/" + str(details['company_name'].get()).lower() + ".jpg"
         self.image=Image.open(self.image_company_path)
-        self.image = self.image.resize((200, 200 ), Image.ANTIALIAS)
+        self.image = self.image.resize((150, 150 ), Image.ANTIALIAS)
         self.img = ImageTk.PhotoImage(self.image)
-        tk.Label(self.left_inner_frame, image=self.img).pack()
+        tk.Label(self.left_inner_frame, image=self.img).pack(padx=(13,0))
 
         self.left_inner_frame.pack(side="left")
         self.middle_inner_frame = tk.Frame(self)
@@ -103,10 +115,10 @@ class detailsPage(tk.Frame):
 
         # Create tool bar frame
         self.tool_bar = tk.Frame(self.middle_inner_frame, bg=BACKGROUND_COLOR, width=300, height=185)
-        self.tool_bar.pack()
+        self.tool_bar.pack(padx=24)
 
         # Example labels that serve as placeholders for other widgets
-        tk.Label(self.tool_bar, text="most relevant Topics:", font=('Helvetica', 15, "bold"), bg=BACKGROUND_COLOR).pack(pady=30)
+        tk.Label(self.tool_bar, text="most relevant Topics:", font=('Helvetica', 13, "bold"), bg=BACKGROUND_COLOR).pack(pady=(30,5))
 
         # Example labels that could be displayed under the "Tool" menu
         self.lda= model_LDA.LDA()
@@ -128,9 +140,10 @@ class detailsPage(tk.Frame):
         sentiment= positive_negative.Sentiment()
         self.image_pos_neg_path= sentiment.get_output(details['company_name'].get())
         self.image_pos_neg = Image.open(self.image_pos_neg_path)
-        self.image_pos_neg = self.image_pos_neg.resize((260, 260), Image.ANTIALIAS)
+        self.image_pos_neg = self.image_pos_neg.resize((220, 220), Image.ANTIALIAS)
         self.img_pos_neg = ImageTk.PhotoImage(self.image_pos_neg)
-        tk.Label(self.right_inner_frame, bg=BACKGROUND_COLOR, text="General feeling from the interviews:", font=('Helvetica', 10,"bold")).pack(side="top")
+        tk.Label(self.right_inner_frame, bg=BACKGROUND_COLOR).pack(side="top")
+        tk.Label(self.right_inner_frame, bg=BACKGROUND_COLOR, text="General feeling from interviews:", font=('Helvetica', 13,  "bold")).pack(side="top")
         tk.Label(self.right_inner_frame, image=self.img_pos_neg).pack(side="top")
 
 
